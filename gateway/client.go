@@ -9,52 +9,74 @@ import (
     "bufio"
     "net"
     "time"
+    "fmt"
 )
 
 const (
+    INIT = 0x0000
     RUN = 0x0001
     CLOSE = 0x0002
 )
 
 type Client struct {
     uuid string
-    in chan string
-    out chan string
+    in chan *protocol.Request
+    out chan *protocol.Response
     reader *bufio.Reader
     writer *bufio.Writer
     status int
     quit chan bool
 }
 
-func NewClient(conn *net.Conn) *Client {
+func NewClient(conn net.Conn) *Client {
     uuid := tool.UUID()
     reader := bufio.NewReader(conn)
     writer := bufio.NewWriter(conn)
     client := &Client{
         uuid: uuid,
-        in: make(chan protocol.Request),
-        out: make(chan protocol.Response),
+        in: make(chan *protocol.Request),
+        out: make(chan *protocol.Response),
         quit: make(chan bool),
         reader: reader,
         writer: writer,
-        status:int{},
+        status: INIT,
     }
     client.Listen()
     return client
 }
 
+func varintSize(x uint64) (n int) {
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
+}
+
+func (client *Client) GetUuid() string {
+    return client.uuid
+}
+
 func (client *Client) Listen() {
     client.status = RUN
-    defer client.Close()
+    go func() {
+        for {
+            client.Read()
+        }
+    }()
     go func() {
         for {
             select {
             case <- client.quit:
+                client.Close()
                 return
             case response := <- client.out:
-                client.Write(&response)
+                client.Write(response)
             case request := <- client.in :
-                client.Dispatch(&request)
+                client.Dispatch(request)
             }
         }
     }()
@@ -80,6 +102,7 @@ func (client *Client) Read() (err error) {
         log.Fatalln("Failed to parse request data:", err)
         return err
     }
+    fmt.Print(request)
     client.in <- request
     return nil
 }
@@ -91,9 +114,9 @@ func (client *Client) Write(response *protocol.Response) (err error) {
         log.Fatalln("Failed to encode reponse data", err)
         return err
     }
-    protoSize := uint64(len(out))
-    bytes := make([]byte, len(protoSize) + protoSize)
-    n := binary.PutUvarint(bytes, protoSize)
+    protoSize := len(out)
+    bytes := make([]byte, uint64(varintSize(uint64(protoSize)) + protoSize))
+    n := binary.PutUvarint(bytes, uint64(protoSize))
     copy(bytes[n:], out)
     client.writer.Write(bytes)
     client.writer.Flush()
