@@ -68,7 +68,7 @@ func (client *Client) poll()  {
             fmt.Println("shit")
             client.Write(response)
         case request := <- client.in :
-            client.Dispatch(request)
+            go client.Dispatch(request)
             //fmt.Println(request)
         }
     }
