@@ -7,6 +7,8 @@ import (
     "encoding/binary"
     "github.com/SeavantUUz/Lillie/protocol"
     "time"
+    "io"
+    "fmt"
 )
 
 const (
@@ -52,10 +54,22 @@ func main(){
             log.Fatalln("Failed to encode reponse data", err)
         }
         protoSize := len(out)
+        fmt.Println(protoSize)
         bytes := make([]byte, uint64(varintSize(uint64(protoSize)) + protoSize))
         n := binary.PutUvarint(bytes, uint64(protoSize))
         copy(bytes[n:], out)
-        conn.Write(bytes)
-        time.Sleep(1)
+        _, err = conn.Write(bytes)
+        if err != nil {
+            if err == io.EOF {
+                log.Println("Client ", conn.RemoteAddr(), " disconnected")
+                conn.Close()
+                break
+            } else {
+                log.Println("Failed writing bytes to conn: ", conn, " with error ", err)
+                conn.Close()
+                break
+            }
+        }
+        time.Sleep(1 * time.Second)
     }
 }

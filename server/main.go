@@ -5,7 +5,6 @@ import (
     "net"
     "log"
     "github.com/SeavantUUz/Lillie/gateway"
-    "fmt"
 )
 
 const (
@@ -37,7 +36,6 @@ func (server *Server) Run() {
         for {
             select {
             case conn := <- server.new_connection:
-                fmt.Println("new connection added")
                 server.Add(conn)
             case <- server.exit:
                 log.Println("gateway exited")
@@ -51,6 +49,7 @@ func (server *Server) Add(conn net.Conn) *gateway.Client {
     client := gateway.NewClient(conn)
     uuid := client.GetUuid()
     server.clients[uuid] = client
+    go client.Run()
     return client
 }
 

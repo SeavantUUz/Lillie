@@ -41,51 +41,42 @@ func NewClient(conn net.Conn) *Client {
         writer: writer,
         status: INIT,
     }
-    client.Listen()
     return client
 }
 
-func varintSize(x uint64) (n int) {
-	for {
-		n++
-		x >>= 7
-		if x == 0 {
-			break
-		}
-	}
-	return n
-}
 
 func (client *Client) GetUuid() string {
     return client.uuid
 }
 
-func (client *Client) Listen() {
+func (client *Client) Run() {
     client.status = RUN
-    go func() {
-        for {
-            client.Read()
+    go client.poll()
+    for client.status == RUN {
+        client.Read()
+    }
+
+}
+
+func (client *Client) poll()  {
+    for {
+        select {
+        case <- client.quit:
+            client.Close()
+            return
+        case response := <- client.out:
+            fmt.Println("shit")
+            client.Write(response)
+        case request := <- client.in :
+            client.Dispatch(request)
+            //fmt.Println(request)
         }
-    }()
-    go func() {
-        for {
-            select {
-            case <- client.quit:
-                client.Close()
-                return
-            case response := <- client.out:
-                client.Write(response)
-            case request := <- client.in :
-                client.Dispatch(request)
-            }
-        }
-    }()
+    }
 }
 
 func (client *Client) Close() {
     client.status = CLOSE
     log.Println("client exit")
-    client.quit <- true
 }
 
 func (client *Client) Read() (err error) {
@@ -95,6 +86,7 @@ func (client *Client) Read() (err error) {
         client.quit <- true
         return err
     }
+    fmt.Println(msgLen)
     bytes := make([]byte, msgLen)
     client.reader.Read(bytes)
     request := &protocol.Request{}
@@ -115,7 +107,7 @@ func (client *Client) Write(response *protocol.Response) (err error) {
         return err
     }
     protoSize := len(out)
-    bytes := make([]byte, uint64(varintSize(uint64(protoSize)) + protoSize))
+    bytes := make([]byte, uint64(tool.VarIntSize(uint64(protoSize)) + protoSize))
     n := binary.PutUvarint(bytes, uint64(protoSize))
     copy(bytes[n:], out)
     client.writer.Write(bytes)
@@ -127,6 +119,7 @@ func (client *Client) Dispatch(request *protocol.Request) (err error) {
     operation := request.Operation
     switch operation {
     case protocol.Operation_MESSAGE_SEND:
+        fmt.Println("send")
         if err := client.ack(request); err != nil {
             return err
         }
@@ -142,7 +135,10 @@ func (client *Client) ack(request *protocol.Request) (err error)  {
         MsgId: msgId ,
         Timestamp: uint64(time.Now().Unix()),
         Operation: protocol.Operation_MESSAGE_ACK,
+        Body: []byte{},
     }
+    fmt.Println("out2")
     client.out <- response
+    fmt.Println("out")
     return nil
 }
