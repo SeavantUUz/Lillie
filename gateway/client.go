@@ -49,34 +49,43 @@ func (client *Client) GetUuid() string {
     return client.uuid
 }
 
+// it's not good way to mix fuck'in jobs in one function
 func (client *Client) Run() {
     client.status = RUN
-    go client.poll()
-    for client.status == RUN {
-        client.Read()
-    }
-
+    client.Listen()
 }
 
-func (client *Client) poll()  {
-    for {
-        select {
-        case <- client.quit:
-            client.Close()
-            return
-        case response := <- client.out:
-            fmt.Println("shit")
-            client.Write(response)
-        case request := <- client.in :
-            go client.Dispatch(request)
-            //fmt.Println(request)
+func (client *Client) Listen()  {
+    go func() {
+        for client.status == RUN {
+            client.Read()
         }
-    }
+    }()
+    
+    go func() {
+        for response :=  range client.out {
+            client.Write(response)
+        }
+    }()
+    
+    go func() {
+        for request := range client.in {
+            client.Dispatch(request)
+        }
+    }()
+    
+    go func() {
+        for _ = range client.quit {
+            client.Close()
+        }
+    }()
 }
 
 func (client *Client) Close() {
     client.status = CLOSE
-    log.Println("client exit")
+    close(client.in)
+    close(client.out)
+    close(client.quit)
 }
 
 func (client *Client) Read() (err error) {
@@ -94,7 +103,6 @@ func (client *Client) Read() (err error) {
         log.Fatalln("Failed to parse request data:", err)
         return err
     }
-    fmt.Print(request)
     client.in <- request
     return nil
 }
@@ -137,8 +145,6 @@ func (client *Client) ack(request *protocol.Request) (err error)  {
         Operation: protocol.Operation_MESSAGE_ACK,
         Body: []byte{},
     }
-    fmt.Println("out2")
     client.out <- response
-    fmt.Println("out")
     return nil
 }
