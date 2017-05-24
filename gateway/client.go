@@ -12,11 +12,6 @@ import (
     "fmt"
 )
 
-const (
-    INIT = 0x0000
-    RUN = 0x0001
-    CLOSE = 0x0002
-)
 
 type Client struct {
     uuid string
@@ -26,9 +21,10 @@ type Client struct {
     writer *bufio.Writer
     status int
     quit chan bool
+    server *Server
 }
 
-func NewClient(conn net.Conn) *Client {
+func NewClient(conn net.Conn, server *Server) *Client {
     uuid := tool.UUID()
     reader := bufio.NewReader(conn)
     writer := bufio.NewWriter(conn)
@@ -40,6 +36,7 @@ func NewClient(conn net.Conn) *Client {
         reader: reader,
         writer: writer,
         status: INIT,
+        server: server,
     }
     return client
 }
@@ -76,6 +73,7 @@ func (client *Client) Listen()  {
     
     go func() {
         for _ = range client.quit {
+            fmt.Println("quit")
             client.Close()
         }
     }()
@@ -86,13 +84,14 @@ func (client *Client) Close() {
     close(client.in)
     close(client.out)
     close(client.quit)
+    client.server.leave <- client.uuid
 }
 
 func (client *Client) Read() (err error) {
     msgLen, err := binary.ReadUvarint(client.reader)
     if err != nil {
         log.Println("Read Error")
-        client.quit <- true
+        client.Close()
         return err
     }
     fmt.Println(msgLen)
