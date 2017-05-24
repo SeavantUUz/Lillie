@@ -9,7 +9,6 @@ import (
 
 type Server struct {
     clients map[string]*Client
-    new_connection chan net.Conn
     exit chan bool
     leave chan string
     status int
@@ -41,7 +40,6 @@ func (server *Server) Run() {
 
 func (server *Server) Stop() {
     server.status = CLOSE
-    close(server.new_connection)
     ch := make(chan bool)
     for _, v := range server.clients {
         go func(v *Client) {

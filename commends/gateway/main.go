@@ -4,6 +4,10 @@ import (
     "net"
     "log"
     "github.com/SeavantUUz/Lillie/gateway"
+    "os"
+    "os/signal"
+    "syscall"
+    "fmt"
 )
 
 const (
@@ -11,6 +15,7 @@ const (
     CONN_PORT = "7453"
     CONN_TYPE = "tcp"
 )
+
 
 func main() {
     server := gateway.NewServer()
@@ -20,9 +25,16 @@ func main() {
         go server.Stop()
         log.Printf("error %s occured when is listening", err)
     }
+    c := make(chan os.Signal, 2)
+    signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+    go func() {
+        <-c
+        go server.Stop()
+        os.Exit(1)
+        fmt.Println("hahaha")
+    }()
     for {
         conn, _ := l.Accept()
         server.Join(conn)
     }
-    server.Stop()
 }

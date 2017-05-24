@@ -72,18 +72,21 @@ func (client *Client) Listen()  {
     }()
     
     go func() {
-        for _ = range client.quit {
-            fmt.Println("quit")
-            client.Close()
+        defer close(client.quit)
+        defer close(client.in)
+        defer close(client.out)
+        for {
+            select {
+            case <- client.quit:
+                fmt.Println("quit")
+                client.Close()
+            }
         }
     }()
 }
 
 func (client *Client) Close() {
     client.status = CLOSE
-    close(client.in)
-    close(client.out)
-    close(client.quit)
     client.server.leave <- client.uuid
 }
 
@@ -126,7 +129,6 @@ func (client *Client) Dispatch(request *protocol.Request) (err error) {
     operation := request.Operation
     switch operation {
     case protocol.Operation_MESSAGE_SEND:
-        fmt.Println("send")
         if err := client.ack(request); err != nil {
             return err
         }
@@ -144,6 +146,8 @@ func (client *Client) ack(request *protocol.Request) (err error)  {
         Operation: protocol.Operation_MESSAGE_ACK,
         Body: []byte{},
     }
-    client.out <- response
+    if client.status == RUN {
+        client.out <- response
+    }
     return nil
 }
