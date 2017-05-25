@@ -8,7 +8,6 @@ import (
     "encoding/binary"
     "bufio"
     "net"
-    "time"
     "fmt"
 )
 
@@ -125,29 +124,33 @@ func (client *Client) Write(response *protocol.Response) (err error) {
     return nil
 }
 
+// All operations would be decomposed to several atomic operation
+// As a send message arrived, server should reply a ack and send a notify to opposition.
+// As a sync message arrived, server should pull all un-synced data
 func (client *Client) Dispatch(request *protocol.Request) (err error) {
     operation := request.Operation
     switch operation {
     case protocol.Operation_MESSAGE_SEND:
-        if err := client.ack(request); err != nil {
-            return err
-        }
+        handle(protocol.Operation_MESSAGE_ACK, request)
+        handle(protocol.Operation_MESSAGE_NOTIFY, request)
+    case protocol.Operation_MESSAGE_SYNC:
+        handle(protocol.Operation_MESSAGE_PULL, request)
     }
     return nil
 }
 
 
 // private methods
-func (client *Client) ack(request *protocol.Request) (err error)  {
-    msgId := request.MsgId
-    response := &protocol.Response{
-        MsgId: msgId ,
-        Timestamp: uint64(time.Now().Unix()),
-        Operation: protocol.Operation_MESSAGE_ACK,
-        Body: []byte{},
-    }
-    if client.status == RUN {
-        client.out <- response
-    }
-    return nil
-}
+//func (client *Client) ack(request *protocol.Request) (err error)  {
+//    msgId := request.MsgId
+//    response := &protocol.Response{
+//        MsgId: msgId ,
+//        Timestamp: uint64(time.Now().Unix()),
+//        Operation: protocol.Operation_MESSAGE_ACK,
+//        Body: []byte{},
+//    }
+//    if client.status == RUN {
+//        client.out <- response
+//    }
+//    return nil
+//}

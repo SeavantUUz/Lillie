@@ -6,7 +6,6 @@ import (
 )
 
 
-
 type Server struct {
     clients map[string]*Client
     exit chan bool

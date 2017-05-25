@@ -26,6 +26,7 @@ enum Operation {
     MESSAGE_ACK = 0x0003;
     MESSAGE_READ = 0x0004;
     MESSAGE_ENCRY = 0x0005;
+    MESSAGE_PULL = 0x0006;
 }
 
 // only support text at first
