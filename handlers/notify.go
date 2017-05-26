@@ -9,19 +9,19 @@ import (
     "time"
 )
 
-type AckHandler struct {
+type NotifyHandler struct {
     base *Handler
     msgs chan *amqp.Delivery
 }
 
-func (handler *AckHandler) Listen() (err error) {
+func (handler *NotifyHandler) Listen() (err error) {
     var exchange_name string
     var queue_name string
     
     // what up event should be deal
     exchange_name = "up:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10)
     // the handler
-    queue_name = "handler:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_ACK), 10)
+    queue_name = "handler:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_NOTIFY), 10)
     
     defer handler.Close()
     var conn *amqp.Connection
@@ -104,12 +104,12 @@ func (handler *AckHandler) Listen() (err error) {
     return nil
 }
 
-func (handler *AckHandler) Close()  {
+func (handler *NotifyHandler) Close()  {
     close(handler.msgs)
     log.Println("close ack handler")
 }
 
-func (handler *AckHandler) reply(msg *amqp.Delivery) (error) {
+func (handler *NotifyHandler) reply(msg *amqp.Delivery) (error) {
     request := &protocol.Request{}
     if err := proto.Unmarshal(msg.Body, request); err != nil {
         log.Fatalln("Failed to parse Request:", err)

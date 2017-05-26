@@ -4,6 +4,8 @@ package trials
 import (
     "github.com/streadway/amqp"
     "log"
+    "strconv"
+    "github.com/SeavantUUz/Lillie/protocol"
 )
 
 func failOnError(err error, msg string){
@@ -19,15 +21,28 @@ func main() {
     ch, err := conn.Channel()
     defer ch.Close()
     
+    exchange_name := strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10)
+    queue_name := "handler:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_ACK), 10)
+    
     failOnError(err, "Failed to open a channel")
     
-    q, err := ch.QueueDeclare(
-        "hello",
-        false,
-        false,
-        false,
-        false,
+    err := ch.ExchangeDeclare(
+        exchange_name,
+        "fanout",
+        true, // durable
+        false, //auto_delete
+        false, // internal
+        false, // no wait
         nil,
+    )
+    
+    q, err := ch.QueueDeclare(
+        queue_name,
+        false, // durable
+        false, // delete when unuse
+        true, // exclusive
+        false, // no-wait
+        nil, // argument
     )
     
     failOnError(err, "Failed to declare a queue")
