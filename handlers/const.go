@@ -1,6 +1,8 @@
 package handlers
 
 const (
-    address = "amqp://guest:guest@localhost"
-    port = "5672"
+    ADDRESS = "amqp://guest:guest@localhost"
+    PORT = "5672"
+    UPROUTER = "handler_uprouter"
+    DOWNROUTER = "gateway_downrouter"
 )

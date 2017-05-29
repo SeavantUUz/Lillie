@@ -5,6 +5,8 @@ import (
     "github.com/streadway/amqp"
     "log"
     "github.com/golang/protobuf/proto"
+    "github.com/SeavantUUz/Lillie/tool"
+    "github.com/SeavantUUz/Lillie/handlers"
 )
 
 // the two function below are the same actually.
@@ -17,7 +19,7 @@ import (
 
 // throw request to exchange handlers_uprouter
 // message hang out to different queue by routing key
-func up(request *protocol.Request) {
+func Up(request *protocol.Request) {
     conn, err := amqp.Dial("amqp://guest:guest@172.17.0.3:5672/")
     if err != nil {
         log.Fatalln("Failed to connect to RabbitMQ", err)
@@ -26,8 +28,10 @@ func up(request *protocol.Request) {
     defer conn.Close()
     ch, err := conn.Channel()
     defer ch.Close()
-    q, err := ch.QueueDeclare(
-        "handler_uprouter",
+    exchange_name := handlers.UPROUTER
+    err = ch.ExchangeDeclare(
+        exchange_name,
+        "direct",
         true,
         false,
         false,
@@ -35,7 +39,7 @@ func up(request *protocol.Request) {
         nil,
     )
     if err != nil {
-        log.Fatalln("Failed to declare a channel")
+        log.Fatalln("Failed to declare exchange")
         return
     }
     out, err := proto.Marshal(request)
@@ -44,8 +48,8 @@ func up(request *protocol.Request) {
         return
     }
     err = ch.Publish(
-        "",
-        q.Name,
+        exchange_name, // exchange_name
+        tool.RequestKey(request), //routing key
         false,
         false,
         amqp.Publishing{
@@ -56,12 +60,12 @@ func up(request *protocol.Request) {
         log.Fatalln("Failed to publish message", request)
         return
     }
-    log.Println("up request", request)
+    log.Println("up request sent", request)
 }
 
 
 // the queue should be subscribe by one of gateway's processes
-func down(response *protocol.Response) {
+func Down(response *protocol.Response) {
     operation := response.Operation
     conn, err := amqp.Dial("amqp://guest:guest@172.17.0.3:5672/")
     if err != nil {
@@ -80,10 +84,12 @@ func down(response *protocol.Response) {
         priority = 0
     }
     defer ch.Close()
-    args := make(map[string]uint8)
+    exchange_name := handlers.DOWNROUTER
+    var args amqp.Table
     args["x-max-priority"] = 10
-    q, err := ch.QueueDeclare(
-        "gateway_downrouter",
+    err = ch.ExchangeDeclare(
+        exchange_name,
+        "direct",
         true,
         false,
         false,
@@ -91,7 +97,7 @@ func down(response *protocol.Response) {
         args,
     )
     if err != nil {
-        log.Fatalln("Failed to declare channel", err)
+        log.Fatalln("Failed to declare exchange", err)
         return
     }
     out, err := proto.Marshal(response)
@@ -102,7 +108,7 @@ func down(response *protocol.Response) {
     
     err = ch.Publish(
         "",
-        q.Name,
+        exchange_name,
         false,
         false,
         amqp.Publishing{

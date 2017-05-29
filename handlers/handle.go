@@ -19,8 +19,8 @@ type Handler struct {
 }
 
 func (handler *Handler) Connect() (conn *amqp.Connection, err error) {
-    if conn, err = amqp.Dial(address + ":" + port); err != nil {
-        log.Fatalln("new error")
+    if conn, err = amqp.Dial(ADDRESS + ":" + PORT); err != nil {
+        log.Fatalln("connect error", err)
         return nil, err
     }
     return conn, err

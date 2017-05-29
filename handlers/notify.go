@@ -3,10 +3,11 @@ package handlers
 import (
     "github.com/streadway/amqp"
     "log"
-    "strconv"
     "github.com/SeavantUUz/Lillie/protocol"
     "github.com/golang/protobuf/proto"
     "time"
+    "strconv"
+    "github.com/SeavantUUz/Lillie/connector"
 )
 
 type NotifyHandler struct {
@@ -15,14 +16,7 @@ type NotifyHandler struct {
 }
 
 func (handler *NotifyHandler) Listen() (err error) {
-    var exchange_name string
-    var queue_name string
-    
-    // what up event should be deal
-    exchange_name = "up:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10)
-    // the handler
-    queue_name = "handler:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_NOTIFY), 10)
-    
+    queue_name := "handler:notify"
     defer handler.Close()
     var conn *amqp.Connection
     if conn, err == handler.base.Connect(); err != nil {
@@ -38,8 +32,8 @@ func (handler *NotifyHandler) Listen() (err error) {
     }
     
     err = ch.ExchangeDeclare(
-        exchange_name,
-        "fanout",
+        UPROUTER,
+        "direct",
         true, // durable
         false, //auto_delete
         false, // internal
@@ -69,8 +63,8 @@ func (handler *NotifyHandler) Listen() (err error) {
     
     err = ch.QueueBind(
         q.Name,
-        "",
-        exchange_name,
+        "request:"+ strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10),
+        UPROUTER,
         false,
         nil,
     )
@@ -105,9 +99,8 @@ func (handler *NotifyHandler) Listen() (err error) {
 }
 
 func (handler *NotifyHandler) Close()  {
-    
     close(handler.msgs)
-    log.Println("close ack handler")
+    log.Println("close notify handler")
 }
 
 func (handler *NotifyHandler) reply(msg *amqp.Delivery) (error) {
@@ -117,13 +110,26 @@ func (handler *NotifyHandler) reply(msg *amqp.Delivery) (error) {
         return err
     }
     log.Printf("Receive a request: %s", request)
-    msgId := request.MsgId
-    response := &protocol.Response{
-        MsgId: msgId,
-        Timestamp: uint64(time.Now().Unix()),
-        Operation: protocol.Operation_MESSAGE_ACK,
+    targetId := request.TargetId
+    lastMsgId := FetchLastMsgId(targetId) // fetch last msgId from user inbox
+    notify := &protocol.Notify{
+        LastMsgId: lastMsgId,
     }
-    down(protocol.Operation_MESSAGE_ACK, response)
+    body, err := proto.Marshal(notify)
+    if err != nil {
+        log.Fatalln("protobuf marsh notify error", err)
+        return err
+    }
+    response := &protocol.Response{
+        SourceId: 0,
+        TargetId:targetId,
+        MsgId: 0,
+        Seq: request.Seq,
+        Timestamp: request.Timestamp,
+        Operation: protocol.Operation_MESSAGE_NOTIFY,
+        Body: body,
+    }
+    connector.Down(response)
     return nil
 }
 

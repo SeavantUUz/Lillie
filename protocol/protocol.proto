@@ -6,17 +6,23 @@ package protocol;
 message Request {
     uint64 sourceId = 1;
     uint64 targetId = 2;
-    Operation operation = 3;
-    uint64 msgId = 4;
-    uint64 timestamp = 5;
-    bytes body = 6;
+    uint64 seq = 3; // client generated
+    uint64 msgId = 4; // when received by server, will generate one and assign
+    Operation operation = 5;
+    uint64 timestamp = 6;
+    Router router = 7;
+    bytes body = 8;
 }
 
 message Response {
-    uint64 msgId = 1;
-    uint64 timestamp = 2;
-    Operation operation = 3;
-    bytes body = 4;
+    uint64 sourceId = 1;
+    uint64 targetId = 2;
+    uint64 msgId = 3; // server generated
+    uint64 seq = 4;
+    Operation operation = 5;
+    uint64 timestamp = 6;
+    Router router = 7;
+    bytes body = 8;
 }
 
 enum Operation {
@@ -29,8 +35,20 @@ enum Operation {
     MESSAGE_PULL = 0x0006;
 }
 
+
+// Router 是标明这条消息由哪个客户端发出
+message Router {
+   uint64 machineId = 1;
+   uint64 processId = 2;
+   uint64 cientId = 3;
+}
+
 // only support text at first
 message Send {
     string text = 1;
+}
+
+message Notify {
+    uint64 lastMsgId = 1;
 }
 
