@@ -105,6 +105,7 @@ func (handler *NotifyHandler) Listen() (err error) {
 }
 
 func (handler *NotifyHandler) Close()  {
+    
     close(handler.msgs)
     log.Println("close ack handler")
 }

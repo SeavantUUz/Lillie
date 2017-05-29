@@ -6,22 +6,21 @@ import (
     "strconv"
     "github.com/SeavantUUz/Lillie/protocol"
     "github.com/golang/protobuf/proto"
-    "time"
 )
 
-type AckHandler struct {
+type PersistenceHandler struct {
     base *Handler
     msgs chan *amqp.Delivery
 }
 
-func (handler *AckHandler) Listen() (err error) {
+func (handler *PersistenceHandler) Listen() (err error) {
     var exchange_name string
     var queue_name string
     
     // what up event should be deal
     exchange_name = "up:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10)
     // the handler
-    queue_name = "handler:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_ACK), 10)
+    queue_name = "handler:persistence"
     
     defer handler.Close()
     var conn *amqp.Connection
@@ -104,25 +103,19 @@ func (handler *AckHandler) Listen() (err error) {
     return nil
 }
 
-func (handler *AckHandler) Close()  {
+func (handler *PersistenceHandler) Close()  {
     close(handler.msgs)
-    log.Println("close ack handler")
+    log.Println("close persistence handler")
 }
 
-func (handler *AckHandler) reply(msg *amqp.Delivery) (error) {
+func (handler *PersistenceHandler) reply(msg *amqp.Delivery) (error) {
     request := &protocol.Request{}
     if err := proto.Unmarshal(msg.Body, request); err != nil {
         log.Fatalln("Failed to parse Request:", err)
         return err
     }
-    log.Printf("Receive a request: %s", request)
-    msgId := request.MsgId
-    response := &protocol.Response{
-        MsgId: msgId,
-        Timestamp: uint64(time.Now().Unix()),
-        Operation: protocol.Operation_MESSAGE_ACK,
-    }
-    down(response)
+    log.Printf("Persistence handler received a request: %s", request)
+    persistence_request(request)
     return nil
 }
 
