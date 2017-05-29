@@ -3,27 +3,20 @@ package handlers
 import (
     "github.com/streadway/amqp"
     "log"
-    "strconv"
     "github.com/SeavantUUz/Lillie/protocol"
     "github.com/golang/protobuf/proto"
+    "strconv"
+    "github.com/go-redis/redis"
 )
 
 type StoreHandler struct {
     base *Handler
     msgs chan *amqp.Delivery
+    redis *redis.Conn
 }
 
-
-// StoreHandler only saves msg to memory database, like gocache or redis
 func (handler *StoreHandler) Listen() (err error) {
-    var exchange_name string
-    var queue_name string
-    
-    // what up event should be deal
-    exchange_name = "up:" + strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10)
-    // the handler
-    queue_name = "handler:persistence"
-    
+    queue_name := "handler:store"
     defer handler.Close()
     var conn *amqp.Connection
     if conn, err == handler.base.Connect(); err != nil {
@@ -39,8 +32,8 @@ func (handler *StoreHandler) Listen() (err error) {
     }
     
     err = ch.ExchangeDeclare(
-        exchange_name,
-        "fanout",
+        UPROUTER,
+        "direct",
         true, // durable
         false, //auto_delete
         false, // internal
@@ -70,8 +63,8 @@ func (handler *StoreHandler) Listen() (err error) {
     
     err = ch.QueueBind(
         q.Name,
-        "",
-        exchange_name,
+        "request:"+ strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10),
+        UPROUTER,
         false,
         nil,
     )
@@ -97,7 +90,7 @@ func (handler *StoreHandler) Listen() (err error) {
     forever := make(chan bool)
     go func() {
         for msg := range handler.msgs{
-            handler.reply(msg)
+            handler.store(msg)
         }
     }()
     log.Println("[*] Waiting for logs. To exit press CTRL+C")
@@ -107,17 +100,17 @@ func (handler *StoreHandler) Listen() (err error) {
 
 func (handler *StoreHandler) Close()  {
     close(handler.msgs)
-    log.Println("close persistence handler")
+    log.Println("close store handler")
 }
 
-func (handler *StoreHandler) reply(msg *amqp.Delivery) (error) {
+func (handler *StoreHandler) store(msg *amqp.Delivery) (error) {
     request := &protocol.Request{}
     if err := proto.Unmarshal(msg.Body, request); err != nil {
         log.Fatalln("Failed to parse Request:", err)
         return err
     }
-    log.Printf("Persistence handler received a request: %s", request)
-    save_request(request)
+    log.Printf("Receive a request: %s", request)
+    targetId := request.TargetId
     return nil
 }
 

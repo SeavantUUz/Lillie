@@ -5,7 +5,6 @@ import (
     "log"
     "github.com/SeavantUUz/Lillie/protocol"
     "github.com/golang/protobuf/proto"
-    "time"
     "strconv"
     "github.com/SeavantUUz/Lillie/connector"
 )
@@ -113,13 +112,12 @@ func (handler *AckHandler) reply(msg *amqp.Delivery) (error) {
     seq := request.Seq
     msgId := request.MsgId
     sourceId := request.SourceId
-    timestamp := request.Timestamp
     response := &protocol.Response{
         SourceId: 0, // the sender of ack is server, so assigned sourceId to 0
         TargetId:sourceId,
         MsgId: msgId,
         Seq: seq,
-        Timestamp: timestamp,
+        Router: request.Router,
         Operation: protocol.Operation_MESSAGE_ACK,
     }
     connector.Down(response)

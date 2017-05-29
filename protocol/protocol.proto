@@ -9,9 +9,8 @@ message Request {
     uint64 seq = 3; // client generated
     uint64 msgId = 4; // when received by server, will generate one and assign
     Operation operation = 5;
-    uint64 timestamp = 6;
-    Router router = 7;
-    bytes body = 8;
+    Router router = 6;
+    bytes body = 7;
 }
 
 message Response {
@@ -20,9 +19,8 @@ message Response {
     uint64 msgId = 3; // server generated
     uint64 seq = 4;
     Operation operation = 5;
-    uint64 timestamp = 6;
-    Router router = 7;
-    bytes body = 8;
+    Router router = 6;
+    bytes body = 7;
 }
 
 enum Operation {

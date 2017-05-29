@@ -5,7 +5,6 @@ import (
     "log"
     "github.com/SeavantUUz/Lillie/protocol"
     "github.com/golang/protobuf/proto"
-    "time"
     "strconv"
     "github.com/SeavantUUz/Lillie/connector"
 )
@@ -125,7 +124,7 @@ func (handler *NotifyHandler) reply(msg *amqp.Delivery) (error) {
         TargetId:targetId,
         MsgId: 0,
         Seq: request.Seq,
-        Timestamp: request.Timestamp,
+        Router: request.Router,
         Operation: protocol.Operation_MESSAGE_NOTIFY,
         Body: body,
     }
