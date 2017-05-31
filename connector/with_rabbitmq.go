@@ -49,7 +49,7 @@ func Up(request *protocol.Request) {
     }
     err = ch.Publish(
         exchange_name, // exchange_name
-        tool.RequestKey(request), //routing key
+        tool.RequestKey(request.Operation), //routing key
         false,
         false,
         amqp.Publishing{

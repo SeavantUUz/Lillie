@@ -5,8 +5,8 @@ import (
     "log"
     "github.com/SeavantUUz/Lillie/protocol"
     "github.com/golang/protobuf/proto"
-    "strconv"
     "github.com/SeavantUUz/Lillie/connector"
+    "github.com/SeavantUUz/Lillie/tool"
 )
 
 type AckHandler struct {
@@ -18,7 +18,7 @@ func (handler *AckHandler) Listen() (err error) {
     queue_name := "handler:ack"
     defer handler.Close()
     var conn *amqp.Connection
-    if conn, err == handler.base.Connect(); err != nil {
+    if conn, err == handler.base.connect_to_mq(); err != nil {
         log.Fatalln("fail to connect")
         return err
     }
@@ -62,7 +62,7 @@ func (handler *AckHandler) Listen() (err error) {
     
     err = ch.QueueBind(
         q.Name,
-        "request:"+ strconv.FormatInt(int64(protocol.Operation_MESSAGE_SEND), 10),
+        tool.RequestKey(protocol.Operation_MESSAGE_SEND),
         UPROUTER,
         false,
         nil,

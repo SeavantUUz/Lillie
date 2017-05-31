@@ -3,6 +3,8 @@ package handlers
 import (
     "github.com/streadway/amqp"
     "log"
+    "github.com/garyburd/redigo/redis"
+    "time"
 )
 
 type Handler interface {
@@ -15,13 +17,23 @@ type Handler interface {
     CLose()(err error)
 }
 
-type Handler struct {
-}
+type Handler struct {}
 
-func (handler *Handler) Connect() (conn *amqp.Connection, err error) {
+// Do you think these function should move from there to other certain directory?
+func (handler *Handler) connect_to_mq() (conn *amqp.Connection, err error) {
     if conn, err = amqp.Dial(ADDRESS + ":" + PORT); err != nil {
         log.Fatalln("connect error", err)
         return nil, err
     }
     return conn, err
 }
+
+
+func (handler *Handler) connect_to_redis()  *redis.Pool  {
+   return &redis.Pool{
+       MaxIdle: 10,
+       IdleTimeout: 240 * time.Second,
+       Dial: func() (redis.Conn, error) {return redis.Dial("tcp", REDISADDR)},
+   }
+}
+

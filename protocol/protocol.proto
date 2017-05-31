@@ -8,9 +8,11 @@ message Request {
     uint64 targetId = 2;
     uint64 seq = 3; // client generated
     uint64 msgId = 4; // when received by server, will generate one and assign
-    Operation operation = 5;
-    Router router = 6;
-    bytes body = 7;
+    uint32 version = 5; // reserved version field. 0x1000 0x1001 0x2000 like so on
+    Operation operation = 6;
+    Router router = 7;
+    EndPoint endpoint = 8; // the base info of endpoint
+    bytes body = 9;
 }
 
 message Response {
@@ -34,11 +36,22 @@ enum Operation {
 }
 
 
-// Router 是标明这条消息由哪个客户端发出
+// Router is added by gateway, to refer which server, which process to emit this request
 message Router {
    uint64 machineId = 1;
    uint64 processId = 2;
    uint64 cientId = 3;
+}
+
+message EndPoint {
+    Platform platform = 1;
+}
+
+enum Platform {
+    Default = 0x0000;
+    iOS = 0x0001;
+    Android = 0x0002;
+    Wp = 0x0003;
 }
 
 // only support text at first
