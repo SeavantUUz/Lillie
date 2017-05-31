@@ -94,7 +94,7 @@ func (handler *StoreHandler) Listen() (err error) {
     forever := make(chan bool)
     go func() {
         for msg := range handler.msgs{
-            handler.store(msg)
+            go handler.store(msg)
         }
     }()
     log.Println("[*] Waiting for logs. To exit press CTRL+C")

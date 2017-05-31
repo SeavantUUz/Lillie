@@ -90,7 +90,7 @@ func (handler *PersistenceHandler) Listen() (err error) {
     forever := make(chan bool)
     go func() {
         for msg := range handler.msgs{
-            handler.store(msg) // I have put the method into Handler, but I thought it was not a good way.
+            go handler.store(msg) // I have put the method into Handler, but I thought it was not a good way.
         }
     }()
     log.Println("[*] Waiting for logs. To exit press CTRL+C")
@@ -110,7 +110,7 @@ func (handler *PersistenceHandler) store(msg *amqp.Delivery) (err error) {
         return err
     }
     log.Printf("Receive a request: %s", request)
-    err = handler.persistence(request)
+    go handler.persistence(request)
     if err != nil {
         log.Fatalln("Persistence request failed:", request)
         return err
@@ -135,7 +135,7 @@ func (handler *PersistenceHandler) persistence(request *protocol.Request) (err e
         request.Body)
     if err != nil {
         log.Fatalln("Failed to insert into a message", request)
-        return
+        return err
     }
     return nil
 }
