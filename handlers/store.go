@@ -115,11 +115,10 @@ func (handler *StoreHandler) store(msg *amqp.Delivery) (error) {
     }
     log.Printf("Receive a request: %s", request)
     targetId := request.TargetId
-    go func() {
-        conn := handler.redis_pool.Get()
-        defer conn.Close()
-        conn.Do("RPUSH", tool.InboxKey(targetId), request)
-    }()
+    conn := handler.redis_pool.Get()
+    defer conn.Close()
+    conn.Do("HSET", "entity", tool.InboxKey(targetId), request)
+    conn.Do("RPUSH", tool.InboxKey(targetId), request.MsgId)
     return nil
 }
 
