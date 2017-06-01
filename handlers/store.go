@@ -118,7 +118,7 @@ func (handler *StoreHandler) store(msg *amqp.Delivery) (error) {
     conn := handler.redis_pool.Get()
     defer conn.Close()
     conn.Do("HSET", "entity", tool.InboxKey(targetId), request)
-    conn.Do("RPUSH", tool.InboxKey(targetId), request.MsgId)
+    conn.Do("ZADD", "inbox", request.MsgId, tool.InboxKey(targetId)) // zadd field score content
     return nil
 }
 

@@ -7,7 +7,77 @@ import (
     "github.com/golang/protobuf/proto"
     "github.com/SeavantUUz/Lillie/tool"
     "github.com/SeavantUUz/Lillie/handlers"
+    "github.com/SeavantUUz/Lillie/configs"
 )
+
+func PrepareMqConsume(exchange_name, queue_name, routing_key string) (*amqp.Connection, *amqp.Channel, <-chan amqp.Delivery, error) {
+    var mq_config configs.MQConfig
+    conn, err := amqp.Dial(mq_config.Address + ":" + mq_config.Port)
+    if err != nil {
+        log.Fatalln("Dial Mq Failed", err)
+        return nil, nil, nil, err
+    }
+    ch, err := conn.Channel()
+    if err != nil {
+        log.Fatalln("fail to open a channel")
+        return conn, nil, nil, err
+    }
+    
+    err = ch.ExchangeDeclare(
+        exchange_name,
+        "direct",
+        true, // durable
+        false, //auto_delete
+        false, // internal
+        false, // no wait
+        nil,
+    )
+    if err != nil {
+        log.Fatalln("fail to declare a exchange")
+        return conn, ch, nil, err
+    }
+    
+    
+    q, err := ch.QueueDeclare(
+        queue_name,
+        false, // durable
+        false, // delete when unuse
+        true, // exclusive
+        false, // no-wait
+        nil, // argument
+    )
+    
+    if err != nil {
+        log.Fatalln("fail to declare a queue")
+        return conn, ch, nil, err
+    }
+    
+    err = ch.QueueBind(
+        queue_name,
+        //tool.RequestKey(protocol.Operation_MESSAGE_SEND),
+        routing_key,
+        exchange_name,
+        false,
+        nil,
+    )
+    
+    if err != nil {
+        log.Fatalln("fail to bind queue to exchange")
+        return conn, ch, nil, err
+    }
+    
+    msgs, err := ch.Consume(
+        q.Name,
+        "",
+        true,
+        false,
+        false,
+        false,
+        nil,
+    )
+    
+    return conn, ch, msgs, nil
+}
 
 // the two function below are the same actually.
 // up leads request from gateway to handler
