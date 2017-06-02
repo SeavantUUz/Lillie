@@ -7,6 +7,8 @@ import (
     "github.com/golang/protobuf/proto"
     "github.com/garyburd/redigo/redis"
     "github.com/SeavantUUz/Lillie/tool"
+    "github.com/SeavantUUz/Lillie/connector"
+    "github.com/SeavantUUz/Lillie/configs"
 )
 
 type StoreHandler struct {
@@ -16,80 +18,14 @@ type StoreHandler struct {
 }
 
 func (handler *StoreHandler) Listen() (err error) {
-    queue_name := "handler:store"
-    defer handler.Close()
-    var conn *amqp.Connection
-    if conn, err == handler.base.connect_to_mq(); err != nil {
-        log.Fatalln("fail to connect")
-        return err
-    }
-    defer conn.Close()
-    
-    redis_pool := handler.base.connect_to_redis()
-    handler.redis_pool = redis_pool
-    defer handler.redis_pool.Close()
-    
-    ch, err := conn.Channel()
-    defer ch.Close()
-    if err != nil {
-        log.Fatalln("fail to open a channel")
-        return err
-    }
-
-    err = ch.ExchangeDeclare(
-        UPROUTER,
-        "direct",
-        true, // durable
-        false, //auto_delete
-        false, // internal
-        false, // no wait
-        nil,
-    )
-    if err != nil {
-        log.Fatalln("fail to declare a exchange")
-        return err
-    }
-    
-    
-    q, err := ch.QueueDeclare(
-        queue_name,
-        false, // durable
-        false, // delete when unuse
-        true, // exclusive
-        false, // no-wait
-        nil, // argument
-    )
-    
-    if err != nil {
-        log.Fatalln("fail to declare a queue")
-        return err
-    }
-    
-    err = ch.QueueBind(
-        q.Name,
-        tool.RequestKey(protocol.Operation_MESSAGE_SEND),
-        UPROUTER,
-        false,
-        nil,
-    )
-    if err != nil {
-        log.Fatalln("fail to bind queue to exchange")
-        return err
-    }
-    
-    handler.msgs, err == ch.Consume(
-        q.Name,
-        "",
-        true,
-        false,
-        false,
-        false,
-        nil,
-    )
+    conn, ch, msgs, err := connector.PrepareMqConsume(configs.UPROUTER, "handler:store",
+	    tool.RequestKey(protocol.Operation_MESSAGE_SEND))
     if err != nil {
         log.Fatalln("fail to launch a consumer")
-        return err
     }
+    defer conn.Close()
+    defer ch.Close()
+    handler.msgs = msgs
     
     forever := make(chan bool)
     go func() {
