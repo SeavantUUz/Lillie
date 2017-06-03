@@ -87,7 +87,7 @@ func (r *Receiver) dispatch(request *protocol.Request)  {
     // add unique msg id
     msgId := r.server.node.Generate()
     request.Router = &protocol.Router{
-
+        ClientId:r.uuid,
     }
     request.MsgId = msgId
     connector.Up(request)
