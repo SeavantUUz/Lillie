@@ -40,7 +40,7 @@ enum Operation {
 message Router {
    uint64 machineId = 1;
    uint64 processId = 2;
-   uint64 cientId = 3;
+   uint64 clientId = 3;
 }
 
 message EndPoint {

@@ -3,6 +3,9 @@ package gateway
 import (
     "net"
     "fmt"
+    "github.com/bwmarrin/snowflake"
+    "github.com/SeavantUUz/Lillie/tool"
+    "log"
 )
 
 type Gateway struct {
@@ -10,6 +13,7 @@ type Gateway struct {
     sender *Sender
     exit chan bool
     leave chan string
+    node *snowflake.Node
 }
 
 func NewGateway() *Gateway{
@@ -19,6 +23,13 @@ func NewGateway() *Gateway{
     server.receivers = make(map[string]*Receiver)
     server.exit = make(chan bool)
     server.leave = make(chan string)
+    node_num := tool.GetNodeNum()
+    node, err := snowflake.NewNode(node_num)
+    if err != nil {
+        log.Fatalln("initial snowflake node err", err)
+        return nil
+    }
+    server.node = node
     return server
 }
 

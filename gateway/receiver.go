@@ -84,6 +84,12 @@ func (r *Receiver) write(response *protocol.Response) (err error) {
 }
 
 func (r *Receiver) dispatch(request *protocol.Request)  {
+    // add unique msg id
+    msgId := r.server.node.Generate()
+    request.Router = &protocol.Router{
+
+    }
+    request.MsgId = msgId
     connector.Up(request)
 }
 
